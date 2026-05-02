@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import {
@@ -59,10 +59,8 @@ const DISPLAY_LIMIT = 4;
 
 export const BoardPresence = ({ boardId, fallbackUsers = [] }: BoardPresenceProps) => {
   const { activeUsers, isLoading } = useBoardPresence(boardId);
-  const [displayUsers, setDisplayUsers] = useState<UserPresence[]>([]);
 
-  // Convert active users to display format
-  useEffect(() => {
+  const displayUsers = useMemo(() => {
     const users: UserPresence[] = activeUsers.map((user) => ({
       id: user.id,
       name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Team Member",
@@ -72,10 +70,10 @@ export const BoardPresence = ({ boardId, fallbackUsers = [] }: BoardPresenceProp
 
     // If no active users detected, show at least the current user (fallback)
     if (users.length === 0 && fallbackUsers.length > 0) {
-      setDisplayUsers(fallbackUsers);
-    } else {
-      setDisplayUsers(users);
+      return fallbackUsers;
     }
+
+    return users;
   }, [activeUsers, fallbackUsers]);
 
   // Show nothing while loading

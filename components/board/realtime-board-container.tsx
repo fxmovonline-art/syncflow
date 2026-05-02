@@ -19,13 +19,11 @@ export function RealtimeBoardContainer({
   slug 
 }: RealtimeBoardContainerProps) {
   const [board, setBoard] = useState<BoardWithRelations>(initialBoard);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Poll for board changes every 2 seconds for real-time updates
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       try {
-        setIsRefreshing(true);
         const response = await fetch(`/api/boards/${slug}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -33,12 +31,14 @@ export function RealtimeBoardContainer({
 
         if (response.ok) {
           const freshBoard = await response.json();
-          setBoard(freshBoard);
+          setBoard((currentBoard) => ({
+            ...currentBoard,
+            ...freshBoard,
+            logs: freshBoard.logs ?? currentBoard.logs,
+          }));
         }
       } catch (error) {
         console.error("Failed to fetch board updates:", error);
-      } finally {
-        setIsRefreshing(false);
       }
     }, 2000); // Poll every 2 seconds
 

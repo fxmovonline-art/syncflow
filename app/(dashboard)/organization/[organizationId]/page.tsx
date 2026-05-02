@@ -1,4 +1,5 @@
 import { currentUser, auth } from "@clerk/nextjs/server";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,10 @@ import {
 interface OrgDashboardPageProps {
   params: Promise<{ organizationId: string }>;
 }
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 
 export default async function OrganizationDashboardPage({
   params,

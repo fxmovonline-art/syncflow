@@ -1,85 +1,144 @@
-import { useEffect, useMemo } from "react";
-import { useOrganization, useSession, useUser } from "@clerk/nextjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSession, useUser } from "@clerk/nextjs";
 
 interface ActiveUser {
   id: string;
-  firstName?: string;
-  lastName?: string;
+  name?: string;
   imageUrl?: string;
   email?: string;
+  isCurrentUser?: boolean;
 }
+
+interface PresenceResponse {
+  users?: ActiveUser[];
+}
+
+const HEARTBEAT_INTERVAL_MS = 15_000;
+const POLL_INTERVAL_MS = 30_000;
+
+const createTabId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
 
 export const useBoardPresence = (boardId: string) => {
   const { session, isLoaded: sessionLoaded } = useSession();
   const { user, isLoaded: userLoaded } = useUser();
-  const { organization, isLoaded: orgLoaded, memberships } = useOrganization({
-    memberships: true,
-  });
+  const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const tabIdRef = useRef<string>(createTabId());
+  const endpoint = `/api/board-presence/${boardId}`;
 
-  const activeUsers = useMemo(() => {
-    if (!sessionLoaded || !userLoaded || !orgLoaded) {
-      return [];
-    }
+  const sortCurrentUserFirst = useCallback(
+    (users: ActiveUser[]) =>
+      [...users].sort((a, b) => {
+        if (a.id === user?.id) return -1;
+        if (b.id === user?.id) return 1;
+        return 0;
+      }),
+    [user?.id]
+  );
 
-    const usersToDisplay: ActiveUser[] = [];
-
-    if (user && session) {
-      usersToDisplay.push({
-        id: user.id,
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
-        imageUrl: user.imageUrl || "",
-        email: user.emailAddresses?.[0]?.emailAddress || "",
-      });
-    }
-
-    if (organization && memberships?.data) {
-      memberships.data.forEach((membership) => {
-        const userData = membership.publicUserData;
-
-        if (userData?.userId && userData.userId !== user?.id) {
-          usersToDisplay.push({
-            id: userData.userId,
-            firstName: userData.firstName || "",
-            lastName: userData.lastName || "",
-            imageUrl: userData.imageUrl || "",
-            email: userData.identifier || "",
-          });
-        }
-      });
-    }
-
-    return usersToDisplay;
-  }, [sessionLoaded, userLoaded, orgLoaded, session, user, organization, memberships]);
-
-  useEffect(() => {
-    if (!sessionLoaded || !userLoaded || !orgLoaded || !user || !session) {
+  const fetchPresence = useCallback(async () => {
+    if (!boardId || !user) {
+      setActiveUsers([]);
+      setIsLoading(false);
       return;
     }
 
-    const presenceKey = `board-presence-${boardId}`;
-    const writePresence = () => {
-      sessionStorage.setItem(
-        presenceKey,
-        JSON.stringify({
-          userId: user.id,
-          timestamp: Date.now(),
-          boardId,
-        })
-      );
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as PresenceResponse;
+      setActiveUsers(sortCurrentUserFirst(data.users ?? []));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [boardId, endpoint, sortCurrentUserFirst, user]);
+
+  const sendHeartbeat = useCallback(async () => {
+    if (!boardId || !user || !session) {
+      return;
+    }
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tabId: tabIdRef.current }),
+      });
+
+      if (response.ok) {
+        await fetchPresence();
+        return;
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [boardId, endpoint, fetchPresence, session, user]);
+
+  useEffect(() => {
+    if (!sessionLoaded || !userLoaded) {
+      return;
+    }
+
+    if (!user || !session) {
+      return;
+    }
+
+    void sendHeartbeat();
+    const heartbeatInterval = window.setInterval(
+      sendHeartbeat,
+      HEARTBEAT_INTERVAL_MS
+    );
+    const pollInterval = window.setInterval(fetchPresence, POLL_INTERVAL_MS);
+
+    const clearPresence = () => {
+      void fetch(endpoint, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tabId: tabIdRef.current }),
+        keepalive: true,
+      });
     };
 
-    writePresence();
-    const interval = setInterval(writePresence, 5000);
+    window.addEventListener("pagehide", clearPresence);
+    window.addEventListener("beforeunload", clearPresence);
 
     return () => {
-      clearInterval(interval);
-      sessionStorage.removeItem(presenceKey);
+      window.clearInterval(heartbeatInterval);
+      window.clearInterval(pollInterval);
+      window.removeEventListener("pagehide", clearPresence);
+      window.removeEventListener("beforeunload", clearPresence);
+      clearPresence();
     };
-  }, [sessionLoaded, userLoaded, orgLoaded, session, user, boardId]);
+  }, [
+    endpoint,
+    fetchPresence,
+    sendHeartbeat,
+    session,
+    sessionLoaded,
+    user,
+    userLoaded,
+  ]);
 
   return {
-    activeUsers,
-    isLoading: !sessionLoaded || !userLoaded || !orgLoaded,
+    activeUsers: user && session ? activeUsers : [],
+    isLoading:
+      !sessionLoaded || !userLoaded ? true : Boolean(user && session && isLoading),
   };
 };

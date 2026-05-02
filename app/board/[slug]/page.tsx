@@ -1,4 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import db from "@/lib/db";
 import { RealtimeBoardContainer } from "@/components/board/realtime-board-container";
@@ -11,6 +12,43 @@ import { Share2, Users, Star } from "lucide-react";
 
 interface BoardPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: BoardPageProps): Promise<Metadata> {
+  const fallbackTitle = "Board";
+
+  try {
+    const { userId, orgId } = await auth();
+
+    if (!userId) {
+      return { title: fallbackTitle };
+    }
+
+    const { slug } = await params;
+    const board = await db.board.findUnique({
+      where: { slug },
+      select: {
+        title: true,
+        userId: true,
+        orgId: true,
+      },
+    });
+
+    if (!board) {
+      return { title: fallbackTitle };
+    }
+
+    const hasAccess =
+      board.userId === userId || Boolean(board.orgId && board.orgId === orgId);
+
+    return {
+      title: hasAccess ? board.title : fallbackTitle,
+    };
+  } catch {
+    return { title: fallbackTitle };
+  }
 }
 
 export default async function BoardPage({ params }: BoardPageProps) {
@@ -218,4 +256,3 @@ export default async function BoardPage({ params }: BoardPageProps) {
     </div>
   );
 }
-

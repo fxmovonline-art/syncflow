@@ -63,7 +63,7 @@ export const BoardPresence = ({ boardId, fallbackUsers = [] }: BoardPresenceProp
   const displayUsers = useMemo(() => {
     const users: UserPresence[] = activeUsers.map((user) => ({
       id: user.id,
-      name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Team Member",
+      name: user.name || user.email || "Team Member",
       imageUrl: user.imageUrl,
       email: user.email,
     }));

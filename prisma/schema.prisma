@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User: Clerk se sync hoga
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  name      String?
+  email     String   @unique
+  imageUrl  String?
+  boards    Board[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Board: Main project space
+model Board {
+  id              String   @id @default(uuid())
+  title           String
+  slug            String   @unique
+  userId          String
+  orgId           String?
+  user            User     @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+  lists           List[]
+  logs            AuditLog[]
+  imageId         String?
+  imageThumbUrl   String?
+  imageFullUrl    String?
+  imageUserName   String?
+  imageLinkHTML   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// List: Trello-like lists (To-Do, In-Progress etc.)
+model List {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards     Card[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Card: Trello-like cards (The actual tasks)
+model Card {
+  id            String   @id @default(uuid())
+  title         String
+  order         Int
+  description   String?  @db.Text
+  checklistItems Json    @default("[]")
+  listId        String
+  list          List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum ACTION {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum ENTITY_TYPE {
+  BOARD
+  LIST
+  CARD
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  orgId       String?
+  action      ACTION
+  entityId    String
+  entityType  ENTITY_TYPE
+  entityTitle String
+  userId      String
+  userImage   String      @db.Text
+  userName    String      @db.Text
+  boardId     String
+  board       Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}

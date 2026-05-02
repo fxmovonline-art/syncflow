@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession, useUser } from "@clerk/nextjs";
 
 interface ActiveUser {
@@ -13,8 +13,8 @@ interface PresenceResponse {
   users?: ActiveUser[];
 }
 
-const HEARTBEAT_INTERVAL_MS = 15_000;
-const POLL_INTERVAL_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 5_000;
+const POLL_INTERVAL_MS = 5_000;
 
 const createTabId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -23,6 +23,26 @@ const createTabId = () => {
 
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
+
+const getCurrentUserPresence = (user: NonNullable<ReturnType<typeof useUser>["user"]>): ActiveUser => {
+  const email = user.emailAddresses?.[0]?.emailAddress || "";
+  const name =
+    `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+    user.username ||
+    email ||
+    "Team Member";
+
+  return {
+    id: user.id,
+    name,
+    imageUrl: user.imageUrl || "",
+    email,
+    isCurrentUser: true,
+  };
+};
+
+const areUsersEqual = (currentUsers: ActiveUser[], nextUsers: ActiveUser[]) =>
+  JSON.stringify(currentUsers) === JSON.stringify(nextUsers);
 
 export const useBoardPresence = (boardId: string) => {
   const { session, isLoaded: sessionLoaded } = useSession();
@@ -50,7 +70,7 @@ export const useBoardPresence = (boardId: string) => {
     }
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${endpoint}?t=${Date.now()}`, {
         method: "GET",
         cache: "no-store",
       });
@@ -60,7 +80,11 @@ export const useBoardPresence = (boardId: string) => {
       }
 
       const data = (await response.json()) as PresenceResponse;
-      setActiveUsers(sortCurrentUserFirst(data.users ?? []));
+      const users = sortCurrentUserFirst(data.users ?? []);
+
+      setActiveUsers((currentUsers) =>
+        areUsersEqual(currentUsers, users) ? currentUsers : users
+      );
     } finally {
       setIsLoading(false);
     }
@@ -136,8 +160,19 @@ export const useBoardPresence = (boardId: string) => {
     userLoaded,
   ]);
 
+  const displayUsers = useMemo(() => {
+    if (!user || !session) {
+      return [];
+    }
+
+    return sortCurrentUserFirst([
+      getCurrentUserPresence(user),
+      ...activeUsers.filter((activeUser) => activeUser.id !== user.id),
+    ]);
+  }, [activeUsers, session, sortCurrentUserFirst, user]);
+
   return {
-    activeUsers: user && session ? activeUsers : [],
+    activeUsers: displayUsers,
     isLoading:
       !sessionLoaded || !userLoaded ? true : Boolean(user && session && isLoading),
   };

@@ -8,8 +8,6 @@ interface PresenceRequestBody {
   tabId?: string;
 }
 
-const getParams = async (params: Promise<{ boardId: string }>) => params;
-
 async function canAccessBoard(boardId: string, userId: string, orgId?: string | null) {
   const board = await db.board.findUnique({
     where: { id: boardId },
@@ -37,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { boardId } = await getParams(params);
+    const { boardId } = await params;
     const hasAccess = await canAccessBoard(boardId, userId, orgId);
 
     if (!hasAccess) {
@@ -78,7 +76,14 @@ export async function GET(
         isCurrentUser: presence.userId === userId,
       }));
 
-    return NextResponse.json({ users });
+    return NextResponse.json(
+      { users },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Failed to fetch board presence:", error);
     return NextResponse.json(
@@ -99,7 +104,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { boardId } = await getParams(params);
+    const { boardId } = await params;
     const hasAccess = await canAccessBoard(boardId, userId, orgId);
 
     if (!hasAccess) {
@@ -121,6 +126,8 @@ export async function POST(
       email ||
       "Team Member";
 
+    const now = new Date();
+
     await db.boardPresence.upsert({
       where: {
         boardId_userId_sessionId_tabId: {
@@ -134,6 +141,7 @@ export async function POST(
         name,
         email,
         imageUrl: user?.imageUrl || "",
+        lastSeen: now,
       },
       create: {
         boardId,
@@ -143,6 +151,7 @@ export async function POST(
         name,
         email,
         imageUrl: user?.imageUrl || "",
+        lastSeen: now,
       },
     });
 
@@ -176,7 +185,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { boardId } = await getParams(params);
+    const { boardId } = await params;
     const body = (await request.json().catch(() => ({}))) as PresenceRequestBody;
 
     if (!body.tabId) {

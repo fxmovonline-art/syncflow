@@ -3,6 +3,7 @@
 import { FormEvent, useState, useTransition } from "react";
 import { Check, Copy, Loader2, Mail, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { shareBoard } from "@/actions/share-board";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export function ShareBoardButton({
   boardUrl,
   className,
 }: ShareBoardButtonProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [copied, setCopied] = useState(false);
@@ -73,6 +75,7 @@ export function ShareBoardButton({
 
       toast.success(`Invitation sent to ${result.data?.email ?? email}`);
       setEmail("");
+      router.refresh();
     });
   };
 

@@ -1,8 +1,11 @@
 "use server";
 
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
+import { ACTION, ENTITY_TYPE } from "@prisma/client";
 
 import db from "@/lib/db";
+import { createAuditLog } from "@/lib/create-audit-log";
 
 interface ShareBoardInput {
   boardId: string;
@@ -36,6 +39,7 @@ export async function shareBoard({
       where: { id: boardId },
       select: {
         id: true,
+        slug: true,
         title: true,
         userId: true,
         orgId: true,
@@ -68,6 +72,16 @@ export async function shareBoard({
       role: "org:member",
       redirectUrl,
     });
+
+    createAuditLog({
+      entityId: board.id,
+      entityType: ENTITY_TYPE.BOARD,
+      entityTitle: `Invitation sent to ${trimmedEmail}`,
+      action: ACTION.UPDATE,
+      boardId: board.id,
+    });
+
+    revalidatePath(`/board/${board.slug}`);
 
     return {
       data: {

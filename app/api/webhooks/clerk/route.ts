@@ -1,6 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
+import { ACTION, ENTITY_TYPE } from "@prisma/client";
 import db from "@/lib/db";
 
 export async function POST(req: Request) {
@@ -90,6 +91,53 @@ export async function POST(req: Request) {
       });
     } catch (error) {
       console.error("Database error during user deletion:", error);
+      return new Response("Database error", { status: 500 });
+    }
+  }
+
+  if (eventType === "organizationMembership.created") {
+    try {
+      const membershipData = evt.data as unknown as {
+        organization?: { id?: string; name?: string };
+        public_user_data?: {
+          user_id?: string;
+          first_name?: string;
+          last_name?: string;
+          image_url?: string;
+          identifier?: string;
+        };
+      };
+
+      const organizationId = membershipData.organization?.id;
+      const memberName = `${membershipData.public_user_data?.first_name || ""} ${membershipData.public_user_data?.last_name || ""}`.trim();
+      const fallbackName = membershipData.public_user_data?.identifier || "A user";
+      const displayName = memberName || fallbackName;
+      const userImage = membershipData.public_user_data?.image_url || "";
+
+      if (organizationId) {
+        const orgBoards = await db.board.findMany({
+          where: { orgId: organizationId },
+          select: { id: true },
+        });
+
+        if (orgBoards.length > 0) {
+          await db.auditLog.createMany({
+            data: orgBoards.map((board) => ({
+              orgId: organizationId,
+              action: ACTION.UPDATE,
+              entityId: board.id,
+              entityType: ENTITY_TYPE.BOARD,
+              entityTitle: `${displayName} joined the organization`,
+              userId: membershipData.public_user_data?.user_id || "system",
+              userImage,
+              userName: displayName,
+              boardId: board.id,
+            })),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Database error during org membership audit logging:", error);
       return new Response("Database error", { status: 500 });
     }
   }

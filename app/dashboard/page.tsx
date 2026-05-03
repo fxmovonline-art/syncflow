@@ -43,16 +43,17 @@ export default async function DashboardPage() {
     console.error("Failed to upsert user:", error);
   }
 
-  const boardContext = orgId ? "organization" : "personal";
+  // Always show personal boards on dashboard, regardless of orgId
+  // Users can navigate to organization via the org switcher or /organization/[orgId]
+  const boardContext = "personal";
   const boards = await db.board.findMany({
-    where: orgId ? { orgId } : { userId, orgId: null },
+    where: { userId, orgId: null },
     orderBy: { createdAt: "desc" },
   });
 
   const emailPrefix = email.split("@")[0];
   const displayName = user.firstName || emailPrefix;
-  const workspaceName =
-    boardContext === "organization" ? "Team workspace" : "Personal workspace";
+  const workspaceName = "Personal workspace";
   const latestBoard = boards[0];
   const latestBoardDate = latestBoard
     ? new Intl.DateTimeFormat("en-US", {
@@ -105,7 +106,7 @@ export default async function DashboardPage() {
                     Access
                   </span>
                   <span className="text-sm font-semibold text-zinc-900 dark:text-white">
-                    {boardContext === "organization" ? "Team editable" : "Private"}
+                    Private
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
@@ -201,16 +202,6 @@ export default async function DashboardPage() {
                 Quick access to all active workspaces.
               </p>
             </div>
-            {boardContext === "organization" && orgId ? (
-              <Link href={`/organization/${orgId}`}>
-                <Button
-                  variant="outline"
-                  className="rounded-full border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Open organization view
-                </Button>
-              </Link>
-            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

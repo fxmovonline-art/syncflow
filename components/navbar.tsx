@@ -1,6 +1,7 @@
 "use client";
 
-import { UserButton, OrganizationSwitcher } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
+import { OrgSwitcherWrapper } from "@/components/org-switcher-wrapper";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ export const Navbar = () => {
       
       <div className="flex w-full justify-end items-center gap-x-3 md:gap-x-4">
         {/* Organization Switcher - Only show in dashboard view, not in board */}
-        <OrganizationSwitcher 
+        <OrgSwitcherWrapper
           hidePersonal={false}
           afterCreateOrganizationUrl="/dashboard?workspace=organization"
           afterLeaveOrganizationUrl="/dashboard?workspace=personal"

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LayoutDashboard, Activity, Settings } from "lucide-react";
-import { OrganizationSwitcher } from "@clerk/nextjs";
+import { OrgSwitcherWrapper } from "@/components/org-switcher-wrapper";
 import { Button } from "@/components/ui/button";
 
 const routes = [
@@ -29,12 +29,12 @@ export const Sidebar = () => {
           <h1 className="text-2xl font-bold tracking-tight text-primary">SyncFlow</h1>
         </Link>
         <div className="px-3 mb-6">
-          <OrganizationSwitcher 
+          <OrgSwitcherWrapper
             hidePersonal={false}
-              afterCreateOrganizationUrl="/dashboard?workspace=organization"
-              afterLeaveOrganizationUrl="/dashboard?workspace=personal"
-              afterSelectOrganizationUrl="/dashboard?workspace=organization"
-              afterSelectPersonalUrl="/dashboard?workspace=personal"
+            afterCreateOrganizationUrl="/dashboard?workspace=organization"
+            afterLeaveOrganizationUrl="/dashboard?workspace=personal"
+            afterSelectOrganizationUrl="/dashboard?workspace=organization"
+            afterSelectPersonalUrl="/dashboard?workspace=personal"
             appearance={{
               elements: {
                 rootBox: "w-full justify-center flex",

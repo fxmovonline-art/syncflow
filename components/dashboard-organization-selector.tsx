@@ -1,6 +1,6 @@
 "use client";
 
-import { OrganizationSwitcher } from "@clerk/nextjs";
+import { OrgSwitcherWrapper } from "@/components/org-switcher-wrapper";
 import { useOrganization, useUser } from "@clerk/nextjs";
 
 export function DashboardOrganizationSelector() {
@@ -33,10 +33,10 @@ export function DashboardOrganizationSelector() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Switch workspace:</span>
-          <OrganizationSwitcher 
+          <OrgSwitcherWrapper
             hidePersonal={false}
-              afterSelectOrganizationUrl="/dashboard?workspace=organization"
-              afterSelectPersonalUrl="/dashboard?workspace=personal"
+            afterSelectOrganizationUrl="/dashboard?workspace=organization"
+            afterSelectPersonalUrl="/dashboard?workspace=personal"
             appearance={{
               elements: {
                 rootBox: "flex justify-center items-center",

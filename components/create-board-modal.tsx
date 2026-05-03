@@ -78,6 +78,9 @@ export const CreateBoardModal = ({ children }: { children: React.ReactNode }) =>
         setIsOpen(false);
         setBoardTitle("");
         setSelectedImage(null);
+        // Navigate to dashboard to trigger a fresh server-side render
+        // so the new board is immediately visible
+        router.push("/dashboard");
         router.refresh();
       }
     });

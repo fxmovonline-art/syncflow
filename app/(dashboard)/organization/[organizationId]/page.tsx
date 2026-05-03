@@ -1,4 +1,5 @@
 import { currentUser, auth } from "@clerk/nextjs/server";
+import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
@@ -29,6 +30,9 @@ export const metadata: Metadata = {
 export default async function OrganizationDashboardPage({
   params,
 }: OrgDashboardPageProps) {
+  // Opt out of caching so every navigation gets fresh board data
+  noStore();
+
   const { userId, orgId: currentOrgId } = await auth();
 
   if (!userId) {

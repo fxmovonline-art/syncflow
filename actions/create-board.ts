@@ -57,7 +57,14 @@ export async function createBoard(formData: FormData) {
       boardId: board.id,
     });
 
+    // Revalidate the dashboard and root layout so the new board
+    // appears immediately without a manual refresh
     revalidatePath("/dashboard");
+    revalidatePath("/", "layout");
+    // Also revalidate the org-specific dashboard if we're in an org
+    if (orgId) {
+      revalidatePath(`/organization/${orgId}`);
+    }
     
     return { data: JSON.parse(JSON.stringify(board)) };
   } catch (error) {

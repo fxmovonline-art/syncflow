@@ -1,29 +1,8 @@
 "use client";
 
-import { OrganizationSwitcher, useOrganization } from "@clerk/nextjs";
-import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { OrganizationSwitcher } from "@clerk/nextjs";
 
 export const OrgSwitcherWrapper = (props: any) => {
-  const { organization } = useOrganization();
-  const router = useRouter();
-  const prevOrgRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const prev = prevOrgRef.current;
-    const current = organization?.id || null;
-
-    // If organization changed, navigate to dashboard with explicit workspace and orgId
-    if (prev !== current) {
-      prevOrgRef.current = current;
-      if (current) {
-        router.push(`/dashboard?workspace=organization&orgId=${current}`);
-      } else {
-        router.push(`/dashboard?workspace=personal`);
-      }
-    }
-  }, [organization, router]);
-
   return (
     <OrganizationSwitcher
       {...props}

@@ -1,4 +1,5 @@
 import { currentUser, auth } from "@clerk/nextjs/server";
+import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,10 @@ import {
   Users,
 } from "lucide-react";
 
-export default async function DashboardPage({ searchParams }: { searchParams?: { workspace?: string; orgId?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams?: { workspace?: string } }) {
+  // Opt out of caching so every navigation gets fresh board data
+  noStore();
+
   const { userId, orgId } = await auth();
 
   if (!userId) {
@@ -43,16 +47,21 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     console.error("Failed to upsert user:", error);
   }
 
-  // Determine workspace from explicit user selection (query param)
+  // Board context: if the user is actively in a Clerk org, show org boards.
+  // The ?workspace query param can force a personal view even inside an org.
   const requestedWorkspace = searchParams?.workspace;
-  const requestedOrgId = searchParams?.orgId;
-  const effectiveOrgId = requestedOrgId || orgId || null;
-  const isOrgRequested = requestedWorkspace === "organization" && !!effectiveOrgId;
-
-  const boardContext = isOrgRequested ? "organization" : "personal";
+  const boardContext =
+    requestedWorkspace === "personal"
+      ? "personal"
+      : orgId
+      ? "organization"
+      : "personal";
 
   const boards = await db.board.findMany({
-    where: boardContext === "organization" ? { orgId: effectiveOrgId } : { userId, orgId: null },
+    where:
+      boardContext === "organization"
+        ? { orgId: orgId }          // All boards belonging to this org
+        : { userId, orgId: null },  // Only the user's personal boards
     orderBy: { createdAt: "desc" },
   });
 

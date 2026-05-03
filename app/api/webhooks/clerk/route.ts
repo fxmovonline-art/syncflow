@@ -109,11 +109,33 @@ export async function POST(req: Request) {
       };
 
       const organizationId = membershipData.organization?.id;
+      const userId = membershipData.public_user_data?.user_id;
       const memberName = `${membershipData.public_user_data?.first_name || ""} ${membershipData.public_user_data?.last_name || ""}`.trim();
       const fallbackName = membershipData.public_user_data?.identifier || "A user";
       const displayName = memberName || fallbackName;
       const userImage = membershipData.public_user_data?.image_url || "";
+      const userEmail = membershipData.public_user_data?.identifier || "";
 
+      // Step 1: Ensure the new member exists in our DB.
+      // They may have never logged into the app before accepting the invite.
+      if (userId && userEmail) {
+        await db.user.upsert({
+          where: { clerkId: userId },
+          update: {
+            name: displayName || null,
+            imageUrl: userImage || null,
+          },
+          create: {
+            clerkId: userId,
+            email: userEmail,
+            name: displayName || null,
+            imageUrl: userImage || null,
+          },
+        });
+        console.log(`[WEBHOOK] Upserted user ${userId} (${displayName}) on org join`);
+      }
+
+      // Step 2: Write an audit log entry so org members can see who joined.
       if (organizationId) {
         const orgBoards = await db.board.findMany({
           where: { orgId: organizationId },
@@ -128,7 +150,7 @@ export async function POST(req: Request) {
               entityId: board.id,
               entityType: ENTITY_TYPE.BOARD,
               entityTitle: `${displayName} joined the organization`,
-              userId: membershipData.public_user_data?.user_id || "system",
+              userId: userId || "system",
               userImage,
               userName: displayName,
               boardId: board.id,
@@ -137,7 +159,7 @@ export async function POST(req: Request) {
         }
       }
     } catch (error) {
-      console.error("Database error during org membership audit logging:", error);
+      console.error("Database error during org membership sync:", error);
       return new Response("Database error", { status: 500 });
     }
   }

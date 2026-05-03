@@ -29,12 +29,12 @@ export const Sidebar = () => {
           <h1 className="text-2xl font-bold tracking-tight text-primary">SyncFlow</h1>
         </Link>
         <div className="px-3 mb-6">
-          <OrgSwitcherWrapper
+        <OrgSwitcherWrapper
             hidePersonal={false}
-            afterCreateOrganizationUrl="/dashboard?workspace=organization"
-            afterLeaveOrganizationUrl="/dashboard?workspace=personal"
-            afterSelectOrganizationUrl="/dashboard?workspace=organization"
-            afterSelectPersonalUrl="/dashboard?workspace=personal"
+            afterCreateOrganizationUrl="/dashboard"
+            afterLeaveOrganizationUrl="/dashboard"
+            afterSelectOrganizationUrl="/dashboard"
+            afterSelectPersonalUrl="/dashboard"
             appearance={{
               elements: {
                 rootBox: "w-full justify-center flex",

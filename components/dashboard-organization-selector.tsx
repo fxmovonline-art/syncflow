@@ -1,26 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { OrganizationSwitcher } from "@clerk/nextjs";
 import { useOrganization, useUser } from "@clerk/nextjs";
 
 export function DashboardOrganizationSelector() {
   const { organization } = useOrganization();
   const { user } = useUser();
-  const router = useRouter();
   const orgMemberships = user?.organizationMemberships || [];
 
   const hasMultipleOrgs = orgMemberships.length > 0;
-
-  const handleOrgSwitch = (orgId: string | null) => {
-    if (orgId) {
-      // Navigate to organization dashboard
-      router.push(`/organization/${orgId}`);
-    } else {
-      // Navigate to personal dashboard
-      router.push("/dashboard");
-    }
-  };
 
   if (!hasMultipleOrgs) {
     return null;
@@ -36,7 +24,7 @@ export function DashboardOrganizationSelector() {
           <p className="text-xs text-blue-700 dark:text-blue-400">
             {organization?.name ? (
               <>
-                Viewing boards from <strong>"{organization.name}"</strong>
+                Viewing boards from <strong>{organization.name}</strong>
               </>
             ) : (
               <>Viewing your <strong>personal</strong> boards</>
@@ -47,7 +35,8 @@ export function DashboardOrganizationSelector() {
           <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Switch workspace:</span>
           <OrganizationSwitcher 
             hidePersonal={false}
-            afterSelectOrganizationUrl="/organization/:id"
+            afterSelectOrganizationUrl="/dashboard"
+            afterSelectPersonalUrl="/dashboard"
             appearance={{
               elements: {
                 rootBox: "flex justify-center items-center",

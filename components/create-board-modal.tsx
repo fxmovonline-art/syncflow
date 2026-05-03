@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createBoard } from "@/actions/create-board";
-import { getRandomBoardImages, UnsplashImage } from "@/lib/unsplash";
+import { getBoardImages } from "@/actions/get-board-images";
+import type { UnsplashImage } from "@/lib/unsplash";
 import { Check, Loader2 } from "lucide-react";
 
 import {
@@ -19,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export const CreateBoardModal = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isLoadingImages, setIsLoadingImages] = useState(false);
@@ -26,19 +29,28 @@ export const CreateBoardModal = ({ children }: { children: React.ReactNode }) =>
   const [selectedImage, setSelectedImage] = useState<UnsplashImage | null>(null);
   const [boardTitle, setBoardTitle] = useState("");
 
-  // Fetch images when dialog opens
-  useEffect(() => {
-    if (isOpen && images.length === 0) {
-      setIsLoadingImages(true);
-      getRandomBoardImages(9)
-        .then(setImages)
-        .catch(() => {
-          toast.error("Failed to load images");
-          setImages([]);
-        })
-        .finally(() => setIsLoadingImages(false));
+  const loadImages = () => {
+    if (images.length > 0 || isLoadingImages) {
+      return;
     }
-  }, [isOpen, images.length]);
+
+    setIsLoadingImages(true);
+    void getBoardImages(9)
+      .then((result) => {
+        if (result.data) {
+          setImages(result.data);
+          return;
+        }
+
+        toast.error(result.error ?? "Failed to load images");
+        setImages([]);
+      })
+      .catch(() => {
+        toast.error("Failed to load images");
+        setImages([]);
+      })
+      .finally(() => setIsLoadingImages(false));
+  };
 
   const onSubmit = (formData: FormData) => {
     if (!boardTitle.trim()) {
@@ -46,17 +58,15 @@ export const CreateBoardModal = ({ children }: { children: React.ReactNode }) =>
       return;
     }
 
-    if (!selectedImage) {
-      toast.error("Please select a background image");
-      return;
-    }
-
     formData.set("title", boardTitle);
-    formData.set("imageId", selectedImage.id);
-    formData.set("imageThumbUrl", selectedImage.urls.thumb);
-    formData.set("imageFullUrl", selectedImage.urls.full);
-    formData.set("imageUserName", selectedImage.user.name);
-    formData.set("imageLinkHTML", selectedImage.links.html);
+
+    if (selectedImage) {
+      formData.set("imageId", selectedImage.id);
+      formData.set("imageThumbUrl", selectedImage.urls.thumb);
+      formData.set("imageFullUrl", selectedImage.urls.full);
+      formData.set("imageUserName", selectedImage.user.name);
+      formData.set("imageLinkHTML", selectedImage.links.html);
+    }
 
     startTransition(async () => {
       const result = await createBoard(formData);
@@ -68,12 +78,17 @@ export const CreateBoardModal = ({ children }: { children: React.ReactNode }) =>
         setIsOpen(false);
         setBoardTitle("");
         setSelectedImage(null);
+        router.refresh();
       }
     });
   };
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
+    if (open) {
+      loadImages();
+    }
+
     if (!open) {
       setBoardTitle("");
       setSelectedImage(null);
@@ -166,7 +181,7 @@ export const CreateBoardModal = ({ children }: { children: React.ReactNode }) =>
               </div>
             ) : (
               <div className="text-center py-8 text-zinc-400">
-                Unable to load images. Try again later.
+                Unable to load images. You can still create the board without a cover.
               </div>
             )}
           </div>
@@ -180,7 +195,7 @@ export const CreateBoardModal = ({ children }: { children: React.ReactNode }) =>
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending || !selectedImage}>
+            <Button type="submit" disabled={isPending}>
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

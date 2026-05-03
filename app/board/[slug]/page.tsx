@@ -1,14 +1,17 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import db from "@/lib/db";
+import { getOrigin } from "@/lib/get-origin";
 import { RealtimeBoardContainer } from "@/components/board/realtime-board-container";
 import { BoardPresence } from "@/components/board/board-presence";
 import { BoardSettings } from "@/components/board/board-settings";
+import { ShareBoardButton } from "@/components/board/share-board-button";
 import { ActivityItem } from "@/components/activity-item";
 import { BoardAccessDeniedError } from "@/components/board-access-denied-error";
 import { Button } from "@/components/ui/button";
-import { Share2, Users, Star } from "lucide-react";
+import { Users, Star } from "lucide-react";
 
 interface BoardPageProps {
   params: Promise<{ slug: string }>;
@@ -60,6 +63,8 @@ export default async function BoardPage({ params }: BoardPageProps) {
   }
 
   const { slug } = await params;
+  const requestHeaders = await headers();
+  const boardUrl = `${getOrigin(requestHeaders)}/board/${slug}`;
 
   // Fetch board - user must either own it personally or belong to its organization
   const board = await db.board.findUnique({
@@ -199,10 +204,12 @@ export default async function BoardPage({ params }: BoardPageProps) {
         </div>
 
         <div className="flex items-center gap-x-2 sm:gap-x-3 flex-shrink-0">
-          <Button variant="secondary" size="sm" className="hidden sm:flex bg-indigo-600 text-white hover:bg-indigo-700 border-none h-8 px-4 font-medium">
-            <Share2 className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Share</span>
-          </Button>
+          <ShareBoardButton
+            boardId={board.id}
+            boardTitle={board.title}
+            orgId={board.orgId}
+            boardUrl={boardUrl}
+          />
           <BoardSettings boardId={board.id} boardTitle={board.title} />
         </div>
       </header>

@@ -35,8 +35,8 @@ export function DashboardOrganizationSelector() {
           <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Switch workspace:</span>
           <OrganizationSwitcher 
             hidePersonal={false}
-            afterSelectOrganizationUrl="/dashboard"
-            afterSelectPersonalUrl="/dashboard"
+              afterSelectOrganizationUrl="/dashboard?workspace=organization"
+              afterSelectPersonalUrl="/dashboard?workspace=personal"
             appearance={{
               elements: {
                 rootBox: "flex justify-center items-center",

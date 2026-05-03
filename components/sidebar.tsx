@@ -31,10 +31,10 @@ export const Sidebar = () => {
         <div className="px-3 mb-6">
           <OrganizationSwitcher 
             hidePersonal={false}
-            afterCreateOrganizationUrl="/dashboard"
-            afterLeaveOrganizationUrl="/dashboard"
-            afterSelectOrganizationUrl="/dashboard"
-            afterSelectPersonalUrl="/dashboard"
+              afterCreateOrganizationUrl="/dashboard?workspace=organization"
+              afterLeaveOrganizationUrl="/dashboard?workspace=personal"
+              afterSelectOrganizationUrl="/dashboard?workspace=organization"
+              afterSelectPersonalUrl="/dashboard?workspace=personal"
             appearance={{
               elements: {
                 rootBox: "w-full justify-center flex",

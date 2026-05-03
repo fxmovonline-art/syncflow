@@ -30,10 +30,10 @@ export const Navbar = () => {
         {/* Organization Switcher - Only show in dashboard view, not in board */}
         <OrganizationSwitcher 
           hidePersonal={false}
-          afterCreateOrganizationUrl="/dashboard"
-          afterLeaveOrganizationUrl="/dashboard"
-          afterSelectOrganizationUrl="/dashboard"
-          afterSelectPersonalUrl="/dashboard"
+          afterCreateOrganizationUrl="/dashboard?workspace=organization"
+          afterLeaveOrganizationUrl="/dashboard?workspace=personal"
+          afterSelectOrganizationUrl="/dashboard?workspace=organization"
+          afterSelectPersonalUrl="/dashboard?workspace=personal"
           appearance={{
             elements: {
               rootBox: "flex justify-center items-center",

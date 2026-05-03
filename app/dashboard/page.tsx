@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams?: { workspace?: string; orgId?: string } }) {
   const { userId, orgId } = await auth();
 
   if (!userId) {
@@ -43,17 +43,22 @@ export default async function DashboardPage() {
     console.error("Failed to upsert user:", error);
   }
 
-  // Always show personal boards on dashboard, regardless of orgId
-  // Users can navigate to organization via the org switcher or /organization/[orgId]
-  const boardContext = "personal";
+  // Determine workspace from explicit user selection (query param)
+  const requestedWorkspace = searchParams?.workspace;
+  const requestedOrgId = searchParams?.orgId;
+  const effectiveOrgId = requestedOrgId || orgId || null;
+  const isOrgRequested = requestedWorkspace === "organization" && !!effectiveOrgId;
+
+  const boardContext = isOrgRequested ? "organization" : "personal";
+
   const boards = await db.board.findMany({
-    where: { userId, orgId: null },
+    where: boardContext === "organization" ? { orgId: effectiveOrgId } : { userId, orgId: null },
     orderBy: { createdAt: "desc" },
   });
 
   const emailPrefix = email.split("@")[0];
   const displayName = user.firstName || emailPrefix;
-  const workspaceName = "Personal workspace";
+  const workspaceName = boardContext === "organization" ? "Team workspace" : "Personal workspace";
   const latestBoard = boards[0];
   const latestBoardDate = latestBoard
     ? new Intl.DateTimeFormat("en-US", {
@@ -106,7 +111,7 @@ export default async function DashboardPage() {
                     Access
                   </span>
                   <span className="text-sm font-semibold text-zinc-900 dark:text-white">
-                    Private
+                    {boardContext === "organization" ? "Team editable" : "Private"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
